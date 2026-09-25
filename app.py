@@ -19,7 +19,7 @@ else:
     client = Groq(api_key=api_key)
 
 # -------------------------------------------------------------------------
-# Session State Initialisierung pentru păstrarea datelor
+# Session State Initialisierung pentru a păstra datele la reîncărcare/resetare
 # -------------------------------------------------------------------------
 if "domeniu" not in st.session_state:
     st.session_state.domeniu = ""
@@ -54,7 +54,7 @@ if uploaded_file is not None:
         st.sidebar.error(f"Fehler beim Laden der Datei: {e}")
 
 # -------------------------------------------------------------------------
-# Formularul principal pentru introducerea datelor
+# Formularul principal
 # -------------------------------------------------------------------------
 with st.form("client_form"):
     st.subheader("Angaben zum Teilnehmer / Bewerber")
@@ -67,7 +67,7 @@ with st.form("client_form"):
     
     submitted = st.form_submit_button("Analyse generieren")
 
-# Buton separat de resetare în afara formularului pentru o funcționare corectă
+# Buton separat de resetare în afara formularului
 if st.button("Formular & Bericht zurücksetzen"):
     st.session_state.domeniu = ""
     st.session_state.vechime = ""
@@ -78,7 +78,7 @@ if st.button("Formular & Bericht zurücksetzen"):
     st.rerun()
 
 if submitted:
-    # Salvăm valorile curente în session_state
+    # Salvăm valorile în session_state
     st.session_state.domeniu = domeniu
     st.session_state.vechime = vechime
     st.session_state.educatie = educatie
@@ -92,8 +92,8 @@ if submitted:
     else:
         with st.spinner("Profil wird analysiert und Bericht wird generiert..."):
             
-            system_prompt = """Sie sind ein KI-Experte für Job-Coaching auf dem deutschen Arbeitsmarkt, spezialisiert auf die Erstellung von Kompetenzanalysen für Teilnehmer von Programmen zur beruflichen Integration.
-Generieren Sie einen strukturierten Bericht in deutscher Sprache, der exakt diese Struktur einhält:
+            system_prompt = """Sie sind ein KI-Experte für Job-Coaching und auf den deutschen Arbeitsmarkt ausgerichtet, spezialisiert auf die Erstellung von "Kompetenzanalysen" für Teilnehmer von Programmen zur beruflichen Integration. 
+Generieren Sie einen strukturierten Bericht in deutscher Sprache (unter Verwendung relevanter deutscher Begriffe wie Fachkompetenz, Sozialkompetenz), der exakt diese Struktur einhält:
 1. ZUSAMMENFASSUNG DES PROFILS (Kurze Synthese)
 2. KOMPETENZANALYSE (Fachkompetenz, Methodenkompetenz, Sozialkompetenz, Personale Kompetenz)
 3. STÄRKEN-SCHWÄCHTE-ANALYSE & LÜCKEN (Stärken, Defizite/Lücken im Vergleich zum Arbeitsmarkt)
@@ -109,7 +109,7 @@ Generieren Sie einen strukturierten Bericht in deutscher Sprache, der exakt dies
 
             try:
                 response = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
+                    model="openai/gpt-oss-20b",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_input}
@@ -129,7 +129,7 @@ Generieren Sie einen strukturierten Bericht in deutscher Sprache, der exakt dies
 if st.session_state.raport:
     st.markdown("---")
     
-    # Zonă dedicată pentru completare manuală pe hârtie după printare
+    # Câmpuri pentru completare manuală (cu pixul după printare)
     st.markdown("""
     <div style="border: 2px dashed #888; padding: 15px; border-radius: 5px; margin-bottom: 20px; background-color: #f9f9f9;">
         <h4 style="margin-top:0; color: #333;">Teilnehmerangaben (zum manuellen Ausfüllen):</h4>
@@ -143,7 +143,7 @@ if st.session_state.raport:
     
     st.markdown("---")
     
-    # CSS pentru printare
+    # Stil pentru printare
     st.markdown("""
     <style>
     @media print {
