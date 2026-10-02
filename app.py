@@ -199,7 +199,7 @@ else:
         else:
             with st.spinner("Das Profil wird analysiert und der Bericht wird erstellt..."):
                 
-                # Promptul tău complex, poetic, detaliat și scris integral în germană
+                # Promptul complex, poetic, detaliat și scris integral în germană cu majuscule normale pentru titluri
                 system_prompt = """Sie sind ein erfahrener, einfühlsamer und inspirierender Experte für Job Coaching auf dem deutschen Arbeitsmarkt, spezialisiert auf die ganzheitliche Potenzialanalyse.
                 Generieren Sie einen tiefgründigen, motivierenden und detaillierten Bericht in deutscher Sprache. Schreiben Sie in einem wertschätzenden, ausdrucksstarken und professionellen Stil (sprachlich elegant, ermutigend und reich an wertvollen Einblicken). 
                 Der Bericht soll das Potenzial des Teilnehmers lebendig widerspiegeln und umfassende, konkrete Empfehlungen enthalten.
@@ -245,4 +245,25 @@ else:
         
         col_pdf, col_word, col_reset = st.columns(3)
         
-        ... # (partea de export rămâne neschimbată)
+        with col_pdf:
+            pdf_buffer = create_pdf(st.session_state.raport_text)
+            st.download_button(
+                label="📥 Als PDF herunterladen",
+                data=pdf_buffer,
+                file_name="Kompetenzanalyse_Bericht.pdf",
+                mime="application/pdf"
+            )
+            
+        with col_word:
+            st.download_button(
+                label="📥 Als Word (.doc) speichern",
+                data=st.session_state.raport_text,
+                file_name="Kompetenzanalyse_Bericht.doc",
+                mime="text/plain"
+            )
+            
+        with col_reset:
+            if st.button("🔄 Neue Analyse / Reset"):
+                st.session_state.form_submitted = False
+                st.session_state.raport_text = ""
+                st.rerun()
