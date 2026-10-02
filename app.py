@@ -4,8 +4,9 @@ from groq import Groq
 from io import BytesIO
 import html
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
 
 # Setările paginii web
 st.set_page_config(page_title="Kompetenzanalyse", page_icon="📊", layout="centered")
@@ -27,38 +28,89 @@ else:
     if "raport_text" not in st.session_state:
         st.session_state.raport_text = ""
 
-    # Funcție sigură pentru generarea PDF-ului (curăță caracterele dubioase și liniile de tabel)
+    # Funcție avansată pentru generarea PDF-ului care transformă tabelele Markdown în tabele grafice reale
     def create_pdf(text):
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
+        doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
         styles = getSampleStyleSheet()
+        
         normal_style = styles['Normal']
-        normal_style.fontSize = 10
-        normal_style.leading = 14
+        normal_style.fontSize = 9
+        normal_style.leading = 12
+
+        table_style = ParagraphStyle(
+            'TableText',
+            parent=styles['Normal'],
+            fontSize=8,
+            leading=11
+        )
 
         story = []
         story.append(Paragraph("<b>Kompetenzanalyse Bericht</b>", styles['Heading1']))
-        story.append(Spacer(1, 12))
+        story.append(Spacer(1, 10))
 
-        for paragraph in text.split('\n'):
-            if paragraph.strip():
-                # Eliminăm caracterele problematice și liniile de tabel Markdown care strică aspectul PDF-ului
-                clean_line = paragraph.replace('■', '-').replace('–', '-')
-                if clean_line.strip().startswith('|') and clean_line.strip().endswith('|'):
-                    # Transformăm liniile de tabel într-un format text mai prietenos pentru PDF
-                    clean_line = clean_line.replace('|', ' | ')
+        lines = text.split('\n')
+        table_data = []
+        in_table = False
+
+        for line in lines:
+            stripped = line.strip()
+            # Verificăm dacă linia face parte dintr-un tabel Markdown (conține |)
+            if stripped.startswith('|') and stripped.endswith('|'):
+                # Ignorăm rândurile de separație de tip |---|---|
+                if '---' in stripped:
+                    continue
                 
-                safe_text = html.escape(clean_line)
-                safe_text = safe_text.replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
-                
-                story.append(Paragraph(safe_text, normal_style))
-                story.append(Spacer(1, 6))
+                cols = [c.strip() for c in stripped.split('|')[1:-1]]
+                # Creăm paragrafe pentru fiecare celulă pentru a permite wrap-text corect
+                row_cells = [Paragraph(html.escape(c.replace('■', '-')), table_style) for c in cols]
+                table_data.append(row_cells)
+                in_table = True
+            else:
+                # Dacă tocmai am ieșit dici dintr-un tabel, îl adăugăm în document
+                if in_table and table_data:
+                    t = Table(table_data, colWidths=[130, 185, 185])
+                    t.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                        ('TOPPADDING', (0, 0), (-1, -1), 6),
+                        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
+                    ]))
+                    # Schimbăm culoarea textului din header în alb pentru vizibilitate
+                    for i in range(len(table_data[0])):
+                        table_data[0][i] = Paragraph(f"<b>{table_data[0][i].text}</b>", ParagraphStyle('H', parent=table_style, textColor=colors.white))
+                    
+                    story.append(t)
+                    story.append(Spacer(1, 10))
+                    table_data = []
+                    in_table = False
+
+                if stripped:
+                    clean_line = stripped.replace('■', '-').replace('–', '-')
+                    safe_text = html.escape(clean_line)
+                    safe_text = safe_text.replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
+                    story.append(Paragraph(safe_text, normal_style))
+                    story.append(Spacer(1, 4))
+
+        # Dacă textul se termină cu un tabel
+        if in_table and table_data:
+            t = Table(table_data, colWidths=[130, 185, 185])
+            t.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
+            ]))
+            story.append(t)
 
         doc.build(story)
         buffer.seek(0)
         return buffer
 
-    # Secțiunea de Upload Documente (opțional, integrată curat)
+    # Secțiunea de Upload Documente (opțional)
     st.subheader("📁 Dokumenten-Upload (Optional)")
     uploaded_files = st.file_uploader(
         "Laden Sie hier Lebensläufe, Zeugnisse, Zertifikate oder Empfehlungsschreiben hoch:",
@@ -102,7 +154,7 @@ else:
             with st.spinner("Das Profil wird analysiert und der Bericht wird erstellt..."):
                 
                 system_prompt = """Sie sind ein KI-Assistent und Experte für Job Coaching auf dem deutschen Arbeitsmarkt, spezialisiert auf die Erstellung von Kompetenzanalysen für Teilnehmer von Integrations- und Qualifizierungsmaßnahmen.
-                Generieren Sie einen strukturierten Bericht in deutscher Sprache mit exakt folgender Struktur, ohne komplexe Markdown-Tabellen (verwenden Sie stattdessen übersichtliche Aufzählungen oder Fließtext, damit es in Dokumenten sauber lesbar ist):
+                Generieren Sie einen strukturierten Bericht in deutscher Sprache mit exakt folgender Struktur und nutzen Sie saubere Markdown-Tabellen für die Kompetenzanalyse und Stärken-Schwächen-Analyse:
                 1. ZUSAMMENFASSUNG DES PROFILS
                 2. KOMPETENZANALYSE (Fachkompetenz, Methodenkompetenz, Sozialkompetenz, Personale Kompetenz)
                 3. STÄRKEN-SCHWÄCHTE-ANALYSE & LÜCKEN (Bezug zum Arbeitsmarkt)
