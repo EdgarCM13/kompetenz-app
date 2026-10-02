@@ -11,27 +11,27 @@ import docx
 # Setările paginii web
 st.set_page_config(page_title="Kompetenzanalyse", page_icon="📊", layout="centered")
 
-# Stiluri CSS personalizate pentru culorile butoanelor (Analiză = Verde, Zurücksetzen = Roșu)
+# Stiluri CSS precize pentru culorile butoanelor (Analiză = Verde, Zurücksetzen = Roșu)
 st.markdown("""
     <style>
-    /* Butonul principal (Analyse generieren) devine VERDE */
-    div.stButton > button:first-child {
+    /* 1. Primul buton din coloane (Analyse generieren) -> VERDE */
+    div.stColumn:nth-child(1) button {
         background-color: #28a745 !important;
         color: white !important;
         border: none !important;
     }
-    div.stButton > button:first-child:hover {
+    div.stColumn:nth-child(1) button:hover {
         background-color: #218838 !important;
         color: white !important;
     }
-    /* Butonul de Reset (Zurücksetzen) devine ROȘU */
-    div.row-widget.stButton > button:nth-child(2), 
-    button[kind="secondary"] {
+
+    /* 2. Al doilea buton din coloane (Zurücksetzen) -> ROȘU */
+    div.stColumn:nth-child(2) button {
         background-color: #dc3545 !important;
         color: white !important;
         border: none !important;
     }
-    button[kind="secondary"]:hover {
+    div.stColumn:nth-child(2) button:hover {
         background-color: #c82333 !important;
         color: white !important;
     }
@@ -55,7 +55,7 @@ else:
     if "raport_text" not in st.session_state:
         st.session_state.raport_text = ""
 
-    # Funcție sigură pentru generarea PDF-ului (evită caracterele dubioase/pătrățelele)
+    # Funcția PDF curată din versiunea inițială stabilă
     def create_pdf(text):
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
@@ -70,9 +70,7 @@ else:
 
         for paragraph in text.split('\n'):
             if paragraph.strip():
-                # Înlocuim caracterele problematice care generează erori de codare în PDF
-                clean_p = paragraph.replace('■', '-').replace('–', '-')
-                safe_text = html.escape(clean_p)
+                safe_text = html.escape(paragraph)
                 safe_text = safe_text.replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
                 story.append(Paragraph(safe_text, normal_style))
                 story.append(Spacer(1, 6))
@@ -81,7 +79,7 @@ else:
         buffer.seek(0)
         return buffer
 
-    # Funcție pentru generarea documentului Word (.docx) curat cu structură pe tabele/paragrafe
+    # Funcție pentru generarea documentului Word (.docx)
     def create_word(text):
         doc = docx.Document()
         doc.add_heading("Kompetenzanalyse Bericht", level=1)
@@ -115,7 +113,7 @@ else:
 
     st.divider()
 
-    # Formularul de date (Fără st.form strict, editare fluidă la Enter)
+    # Formularul de date
     st.subheader("Daten des Teilnehmers / Bewerbers")
     
     domeniu = st.text_input("Grundbereich / Hauptberufserfahrung (z. B. Logistik, Management, IT):", value="")
