@@ -28,19 +28,19 @@ else:
     if "raport_text" not in st.session_state:
         st.session_state.raport_text = ""
 
-    # Funcție pentru curățarea caracterelor problematice care generează pătrățele în PDF
+    # Funcție dură pentru curățarea completă a caracterelor care generează pătrățele negre
     def clean_text(text):
         if not text:
             return ""
-        return (text.replace('■', '-')
-                    .replace('–', '-')
-                    .replace('—', '-')
-                    .replace('\u00a0', ' '))
+        # Înlocuim orice variantă de cratimă/simbol problematic cu o liniuță simplă sau spațiu
+        for char in ['■', '–', '—', '•', '\u2010', '\u2011', '\u2012', '\u2013', '\u2014', '\u00a0']:
+            text = text.replace(char, '-')
+        return text
 
-    # Funcție avansată pentru generarea PDF-ului cu încadrare perfectă și tabele grafice
+    # Funcție avansată pentru generarea PDF-ului cu încadrare matematică strictă (540 pt)
     def create_pdf(text):
         buffer = BytesIO()
-        # Margini de 36 pt (0.5 inch). Lățime utilă pagină Letter = 612 - 72 = 540 puncte
+        # Margini de 36 pt. Lățime utilă pagină Letter = 612 - 72 = 540 puncte
         doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
         styles = getSampleStyleSheet()
         
@@ -70,9 +70,6 @@ else:
         table_data = []
         in_table = False
 
-        # Lățimile coloanelor însumează exact 540 puncte (lățimea utilă a paginii)
-        col_widths = [120, 210, 210]
-
         for line in lines:
             stripped = line.strip()
             # Verificăm dacă linia este parte dintr-un tabel Markdown
@@ -84,12 +81,23 @@ else:
                 table_data.append(row_cells)
                 in_table = True
             else:
-                # Dacă am ieșit dici dintr-un tabel, îl randăm în document
+                # Dacă am ieșit dintr-un tabel, îl randăm în document cu lățimi adaptate numărului de coloane
                 if in_table and table_data:
+                    num_cols = len(table_data[0])
+                    # Alocăm lățimile exacte în funcție de câte coloane are tabelul (total fix 540 pt)
+                    if num_cols == 4:
+                        col_widths = [90, 230, 90, 130]
+                    else:
+                        col_widths = [110, 215, 215]
+
                     formatted_data = []
                     for r_idx, row in enumerate(table_data):
+                        # Asigurăm că rândul are exact numărul corect de celule
+                        while len(row) < num_cols:
+                            row.append(Paragraph("", table_text_style))
+                        
                         new_row = []
-                        for cell in row:
+                        for cell in row[:num_cols]:
                             if r_idx == 0:
                                 new_row.append(Paragraph(cell.text, table_header_style))
                             else:
@@ -101,10 +109,10 @@ else:
                         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
                         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-                        ('TOPPADDING', (0, 0), (-1, -1), 5),
-                        ('LEFTPADDING', (0, 0), (-1, -1), 5),
-                        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                        ('TOPPADDING', (0, 0), (-1, -1), 4),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+                        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
                         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
                     ]))
                     story.append(t)
@@ -121,10 +129,15 @@ else:
 
         # Dacă textul se termină direct cu un tabel
         if in_table and table_data:
+            num_cols = len(table_data[0])
+            col_widths = [90, 230, 90, 130] if num_cols == 4 else [110, 215, 215]
+            
             formatted_data = []
             for r_idx, row in enumerate(table_data):
+                while len(row) < num_cols:
+                    row.append(Paragraph("", table_text_style))
                 new_row = []
-                for cell in row:
+                for cell in row[:num_cols]:
                     if r_idx == 0:
                         new_row.append(Paragraph(cell.text, table_header_style))
                     else:
@@ -136,10 +149,10 @@ else:
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-                ('TOPPADDING', (0, 0), (-1, -1), 5),
-                ('LEFTPADDING', (0, 0), (-1, -1), 5),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('LEFTPADDING', (0, 0), (-1, -1), 4),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 4),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
             ]))
             story.append(t)
@@ -192,7 +205,7 @@ else:
             with st.spinner("Das Profil wird analysiert und der Bericht wird erstellt..."):
                 
                 system_prompt = """Sie sind ein KI-Assistent und Experte für Job Coaching auf dem deutschen Arbeitsmarkt, spezialisiert auf die Erstellung von Kompetenzanalysen für Teilnehmer von Integrations- und Qualifizierungsmaßnahmen.
-                Generieren Sie einen strukturierten Bericht in deutscher Sprache mit exakt folgender Struktur und nutzen Sie saubere Markdown-Tabellen für die Kompetenzanalyse und Stärken-Schwächen-Analyse:
+                Generieren Sie einen strukturierten Bericht in deutscher Sprache mit exakt folgender Struktur und nutzen Sie saubere Markdown-Tabellen. Vermeiden Sie Sonderzeichen oder Unicode-Symbole:
                 1. ZUSAMMENFASSUNG DES PROFILS
                 2. KOMPETENZANALYSE (Fachkompetenz, Methodenkompetenz, Sozialkompetenz, Personale Kompetenz)
                 3. STÄRKEN-SCHWÄCHTE-ANALYSE & LÜCKEN (Bezug zum Arbeitsmarkt)
