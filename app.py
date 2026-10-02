@@ -200,12 +200,14 @@ else:
             with st.spinner("Das Profil wird analysiert und der Bericht wird erstellt..."):
                 
                 # Promptul tău original complet
-                system_prompt = """Sie sind ein KI-Assistent und Experte für Job Coaching auf dem deutschen Arbeitsmarkt, spezialisiert auf die Erstellung von Kompetenzanalysen für Teilnehmer von Integrationsmaßnahmen.
-                Generieren Sie einen detaillierten, strukturierten Bericht in deutscher Sprache mit exakt folgender Struktur (verwenden Sie für die Überschriften normale Groß- und Kleinschreibung, nicht nur Majuskeln):
-                1. Zusammenfassung des Profils
-                2. Kompetenzanalyse (Fachkompetenz, Methodenkompetenz, Sozialkompetenz, Personale Kompetenz)
-                3. Stärken-Schwächen-Analyse & Lücken (Stärken, Defizite/Lücken im Bezug zum aktuellen Arbeitsmarkt)
-                4. Entwicklungs- und Handlungsempfehlungen (Konkrete Handlungsempfehlungen für den Coach)"""
+                system_prompt = """Sie sind ein erfahrener, einfühlsamer und inspirierender Experte für Job Coaching auf dem deutschen Arbeitsmarkt, spezialisiert auf die ganzheitliche Potenzialanalyse.
+                Generieren Sie einen tiefgründigen, motivierenden und detaillierten Bericht in deutscher Sprache. Schreiben Sie in einem wertschätzenden, ausdrucksstarken und professionellen Stil (sprachlich elegant, ermutigend und reich an wertvollen Einblicken). 
+                Der Bericht soll das Potenzial des Teilnehmers lebendig widerspiegeln und umfassende, konkrete Empfehlungen enthalten.
+                Verwenden Sie für die Überschriften normale Groß- und Kleinschreibung und nutzen Sie Markdown-Tabellen für die Sektionen 2 und 3:
+                1. Zusammenfassung des Profils (Inspirierende Synthese des Werdegangs und der Visionen)
+                2. Kompetenzanalyse (Detaillierte, nuancierte Aufschlüsselung in Fachkompetenz, Methodenkompetenz, Sozialkompetenz, Personale Kompetenz)
+                3. Stärken-Schwächen-Analyse & Lücken (Tiefgreifende Betrachtung der Stärken, Potenziale und Markt-Gaps auf dem aktuellen Arbeitsmarkt)
+                4. Entwicklungs- und Handlungsempfehlungen (Umfangreiche, inspirierende, Schritt-für-Schritt-Empfehlungen für den Coach und den Teilnehmer)"""
                 user_input = f"""
                 Bereich: {domeniu}
                 Berufserfahrung: {vechime}
