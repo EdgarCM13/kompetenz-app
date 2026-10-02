@@ -28,19 +28,17 @@ else:
     if "raport_text" not in st.session_state:
         st.session_state.raport_text = ""
 
-    # Funcție dură pentru curățarea completă a caracterelor care generează pătrățele negre
+    # Funcție dură pentru curățarea completă a caracterelor care generează pătrățele negre în PDF
     def clean_text(text):
         if not text:
             return ""
-        # Înlocuim orice variantă de cratimă/simbol problematic cu o liniuță simplă sau spațiu
         for char in ['■', '–', '—', '•', '\u2010', '\u2011', '\u2012', '\u2013', '\u2014', '\u00a0']:
             text = text.replace(char, '-')
         return text
 
-    # Funcție avansată pentru generarea PDF-ului cu încadrare matematică strictă (540 pt)
+    # Funcție avansată pentru generarea PDF-ului cu încadrare matematică strictă (540 pt) și tabele curate
     def create_pdf(text):
         buffer = BytesIO()
-        # Margini de 36 pt. Lățime utilă pagină Letter = 612 - 72 = 540 puncte
         doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
         styles = getSampleStyleSheet()
         
@@ -72,7 +70,6 @@ else:
 
         for line in lines:
             stripped = line.strip()
-            # Verificăm dacă linia este parte dintr-un tabel Markdown
             if stripped.startswith('|') and stripped.endswith('|'):
                 if '---' in stripped:
                     continue
@@ -81,10 +78,8 @@ else:
                 table_data.append(row_cells)
                 in_table = True
             else:
-                # Dacă am ieșit dintr-un tabel, îl randăm în document cu lățimi adaptate numărului de coloane
                 if in_table and table_data:
                     num_cols = len(table_data[0])
-                    # Alocăm lățimile exacte în funcție de câte coloane are tabelul (total fix 540 pt)
                     if num_cols == 4:
                         col_widths = [90, 230, 90, 130]
                     else:
@@ -92,7 +87,6 @@ else:
 
                     formatted_data = []
                     for r_idx, row in enumerate(table_data):
-                        # Asigurăm că rândul are exact numărul corect de celule
                         while len(row) < num_cols:
                             row.append(Paragraph("", table_text_style))
                         
@@ -127,7 +121,6 @@ else:
                     story.append(Paragraph(safe_text, normal_style))
                     story.append(Spacer(1, 4))
 
-        # Dacă textul se termină direct cu un tabel
         if in_table and table_data:
             num_cols = len(table_data[0])
             col_widths = [90, 230, 90, 130] if num_cols == 4 else [110, 215, 215]
@@ -204,13 +197,12 @@ else:
         else:
             with st.spinner("Das Profil wird analysiert und der Bericht wird erstellt..."):
                 
-                system_prompt = """Sie sind ein KI-Assistent und Experte für Job Coaching auf dem deutschen Arbeitsmarkt, spezialisiert auf die Erstellung ausfuehrlicher und detaillierter Kompetenzanalysen für Teilnehmer von Integrations- und Qualifizierungsmaßnahmen.
-                Generieren Sie einen sehr gründlichen, tiefgehenden und professionellen Bericht in deutscher Sprache. 
-                Schreiben Sie in den Markdown-Tabellen reichhaltige, ausführliche und aussagekräftige Beschreibungen (vermeiden Sie kurze Einwort-St Stichpunkte, nutzen Sie aussagekräftige Sätze und Details). Vermeiden Sie Sonderzeichen oder Unicode-Symbole.
-                Struktur:
+                # Promptul tău original și curat (care oferă profunzime și complexitate maximă analizei)
+                system_prompt = """Sie sind ein KI-Assistent und Experte für Job Coaching auf dem deutschen Arbeitsmarkt, spezialisiert auf die Erstellung von Kompetenzanalysen für Teilnehmer von Integrations- und Qualifizierungsmaßnahmen.
+                Generieren Sie einen strukturierten Bericht in deutscher Sprache mit exakt folgender Struktur:
                 1. ZUSAMMENFASSUNG DES PROFILS
-                2. KOMPETENZANALYSE (Ausführliche Analyse für Fachkompetenz, Methodenkompetenz, Sozialkompetenz, Personale Kompetenz)
-                3. STÄRKEN-SCHWÄCHTE-ANALYSE & LÜCKEN (Detaillierter Bezug zum aktuellen Arbeitsmarkt)
+                2. KOMPETENZANALYSE (Fachkompetenz, Methodenkompetenz, Sozialkompetenz, Personale Kompetenz)
+                3. STÄRKEN-SCHWÄCHTE-ANALYSE & LÜCKEN (Bezug zum Arbeitsmarkt)
                 4. ENTWICKLUNGS- UND HANDLUNGSEMPFEHLUNGEN für den Coach"""
 
                 user_input = f"""
