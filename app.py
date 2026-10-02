@@ -5,16 +5,15 @@ from io import BytesIO
 import html
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-import docx
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 # Setările paginii web
 st.set_page_config(page_title="Kompetenzanalyse", page_icon="📊", layout="centered")
 
-# Stiluri CSS precize pentru culorile butoanelor (Analiză = Verde, Zurücksetzen = Roșu)
+# Stiluri CSS pentru culorile butoanelor (Analiză = Verde, Zurücksetzen = Roșu)
 st.markdown("""
     <style>
-    /* 1. Primul buton din coloane (Analyse generieren) -> VERDE */
+    /* Butonul de generare (Analyse generieren) -> VERDE */
     div.stColumn:nth-child(1) button {
         background-color: #28a745 !important;
         color: white !important;
@@ -25,7 +24,7 @@ st.markdown("""
         color: white !important;
     }
 
-    /* 2. Al doilea buton din coloane (Zurücksetzen) -> ROȘU */
+    /* Butonul de reset (Zurücksetzen) -> ROȘU */
     div.stColumn:nth-child(2) button {
         background-color: #dc3545 !important;
         color: white !important;
@@ -38,8 +37,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 Kompetenzanalyse & Profiling")
-st.markdown("Professionelles digitales Instrument zur Kompetenzanalyse, Dokumenten-Auswertung und Erstellung des Handlungsplans.")
+st.title("📊 Kompetenzanalyse")
+st.markdown("Kostenloses digitales Instrument zur professionellen Kompetenzanalyse und Erstellung des Handlungsplans.")
 
 # Accesarea cheii secrete pentru Groq
 api_key = st.secrets.get("GROQ_API_KEY")
@@ -49,13 +48,13 @@ if not api_key:
 else:
     client = Groq(api_key=api_key)
 
-    # Inițializarea stării
+    # Inițializarea stării pentru resetare curată a formularului
     if "form_submitted" not in st.session_state:
         st.session_state.form_submitted = False
     if "raport_text" not in st.session_state:
         st.session_state.raport_text = ""
 
-    # Funcția PDF curată din versiunea inițială stabilă
+    # Funcție sigură și stabilă pentru generarea PDF-ului în memorie (exact versiunea ta care funcționa perfect)
     def create_pdf(text):
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
@@ -70,8 +69,11 @@ else:
 
         for paragraph in text.split('\n'):
             if paragraph.strip():
+                # Curățăm și protejăm caracterele speciale pentru a preveni erorile ReportLab
                 safe_text = html.escape(paragraph)
+                # Înlocuim opțional formatarea îngroșată Markdown cu tag-uri HTML sigure pentru PDF
                 safe_text = safe_text.replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
+                
                 story.append(Paragraph(safe_text, normal_style))
                 story.append(Spacer(1, 6))
 
@@ -79,28 +81,10 @@ else:
         buffer.seek(0)
         return buffer
 
-    # Funcție pentru generarea documentului Word (.docx)
-    def create_word(text):
-        doc = docx.Document()
-        doc.add_heading("Kompetenzanalyse Bericht", level=1)
-        
-        for paragraph in text.split('\n'):
-            if paragraph.strip():
-                clean_p = paragraph.replace('■', '-')
-                if any(clean_p.strip().startswith(prefix) for prefix in ["1.", "2.", "3.", "4.", "5."]):
-                    doc.add_heading(clean_p.strip(), level=2)
-                else:
-                    doc.add_paragraph(clean_p.strip())
-                    
-        buffer = BytesIO()
-        doc.save(buffer)
-        buffer.seek(0)
-        return buffer
-
-    # Secțiunea de Upload Documente
+    # Secțiunea de Upload Documente (nou adăugată, opțională)
     st.subheader("📁 Dokumenten-Upload (Optional)")
     uploaded_files = st.file_uploader(
-        "Laden Sie hier Lebensläufe, Zeugnisse, Zertifikate oder Empfehlungsschreiben hoch (PDF, Word, Bilder):",
+        "Laden Sie hier Lebensläufe, Zeugnisse, Zertifikate oder Empfehlungsschreiben hoch:",
         type=["pdf", "docx", "doc", "txt", "png", "jpg"],
         accept_multiple_files=True
     )
@@ -113,20 +97,21 @@ else:
 
     st.divider()
 
-    # Formularul de date
-    st.subheader("Daten des Teilnehmers / Bewerbers")
-    
-    domeniu = st.text_input("Grundbereich / Hauptberufserfahrung (z. B. Logistik, Management, IT):", value="")
-    vechime = st.text_area("Berufserfahrung / Werdegang (detaillierte Stationen):", value="", height=100)
-    educatie = st.text_input("Ausbildung, Qualifikationen & Zertifikate (z. B. IHK, Studium):", value="")
-    obiective = st.text_area("Ziele (Berufliches Ziel / gewünschte Richtung, falls benötigt):", value="", height=80)
-    observatii = st.text_area("Weitere Beobachtungen (Sozialkompetenzen, Barrieren, Sprachniveau):", value="", height=80)
-    
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
-        submitted = st.button("Analyse generieren")
-    with col_btn2:
-        reset_btn = st.button("Zurücksetzen")
+    # Formularul pentru introducerea datelor (în limba germană)
+    with st.form("client_form"):
+        st.subheader("Daten des Teilnehmers / Bewerbers")
+        
+        domeniu = st.text_input("Grundbereich / Hauptberufserfahrung (z. B. Logistik, Management, IT):")
+        vechime = st.text_input("Berufserfahrung / Werdegang:")
+        educatie = st.text_input("Ausbildung, Qualifikationen & Zertifikate (z. B. IHK, Studium):")
+        obiective = st.text_area("Berufliches Ziel oder gewünschte Richtung des Teilnehmers:")
+        observatii = st.text_area("Weitere Beobachtungen (Sozialkompetenzen, Barrieren, Sprachniveau):")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            submitted = st.form_submit_button("Analyse generieren")
+        with col2:
+            reset_btn = st.form_submit_button("Zurücksetzen")
 
     if reset_btn:
         st.session_state.form_submitted = False
@@ -134,13 +119,13 @@ else:
         st.rerun()
 
     if submitted:
-        if not domeniu:
-            st.warning("Bitte füllen Sie mindestens den Grundbereich aus.")
+        if not domeniu or not obiective:
+            st.warning("Bitte füllen Sie mindestens den Grundbereich und das berufliche Ziel aus.")
         else:
             with st.spinner("Das Profil wird analysiert und der Bericht wird erstellt..."):
                 
                 system_prompt = """Sie sind ein KI-Assistent und Experte für Job Coaching auf dem deutschen Arbeitsmarkt, spezialisiert auf die Erstellung von Kompetenzanalysen für Teilnehmer von Integrations- und Qualifizierungsmaßnahmen.
-                Generieren Sie einen strukturierten Bericht in deutscher Sprache mit exakt folgender Struktur (Vermeiden Sie Wiederholungen):
+                Generieren Sie einen strukturierten Bericht in deutscher Sprache mit exakt folgender Struktur:
                 1. ZUSAMMENFASSUNG DES PROFILS
                 2. KOMPETENZANALYSE (Fachkompetenz, Methodenkompetenz, Sozialkompetenz, Personale Kompetenz)
                 3. STÄRKEN-SCHWÄCHTE-ANALYSE & LÜCKEN (Bezug zum Arbeitsmarkt)
@@ -150,8 +135,8 @@ else:
                 Bereich: {domeniu}
                 Berufserfahrung: {vechime}
                 Ausbildung: {educatie}
-                Hochgeladene Dokumente / Nachweise: {uploaded_file_names}
-                Ziele: {obiective}
+                Hochgeladene Dokumente: {uploaded_file_names}
+                Ziel: {obiective}
                 Beobachtungen: {observatii}
                 """
 
@@ -180,7 +165,7 @@ else:
         st.divider()
         st.subheader("Export & Optionen")
         
-        col_pdf, col_word = st.columns(2)
+        col_pdf, col_word, col_reset = st.columns(3)
         
         with col_pdf:
             pdf_buffer = create_pdf(st.session_state.raport_text)
@@ -192,10 +177,15 @@ else:
             )
             
         with col_word:
-            word_buffer = create_word(st.session_state.raport_text)
             st.download_button(
-                label="📥 Als Word (.docx) herunterladen",
-                data=word_buffer,
-                file_name="Kompetenzanalyse_Bericht.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                label="📥 Als Word (.doc) speichern",
+                data=st.session_state.raport_text,
+                file_name="Kompetenzanalyse_Bericht.doc",
+                mime="text/plain"
             )
+            
+        with col_reset:
+            if st.button("🔄 Neue Analyse / Reset"):
+                st.session_state.form_submitted = False
+                st.session_state.raport_text = ""
+                st.rerun()
