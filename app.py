@@ -28,21 +28,38 @@ else:
     if "raport_text" not in st.session_state:
         st.session_state.raport_text = ""
 
-    # Funcție avansată pentru generarea PDF-ului care transformă tabelele Markdown în tabele grafice reale
+    # Funcție pentru curățarea caracterelor problematice care generează pătrățele în PDF
+    def clean_text(text):
+        if not text:
+            return ""
+        return (text.replace('■', '-')
+                    .replace('–', '-')
+                    .replace('—', '-')
+                    .replace('\u00a0', ' '))
+
+    # Funcție avansată pentru generarea PDF-ului cu încadrare perfectă și tabele grafice
     def create_pdf(text):
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+        # Margini de 36 pt (0.5 inch). Lățime utilă pagină Letter = 612 - 72 = 540 puncte
+        doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
         styles = getSampleStyleSheet()
         
         normal_style = styles['Normal']
         normal_style.fontSize = 9
-        normal_style.leading = 12
+        normal_style.leading = 13
 
-        table_style = ParagraphStyle(
+        table_text_style = ParagraphStyle(
             'TableText',
             parent=styles['Normal'],
             fontSize=8,
             leading=11
+        )
+
+        table_header_style = ParagraphStyle(
+            'TableHeaderText',
+            parent=table_text_style,
+            textColor=colors.white,
+            fontName='Helvetica-Bold'
         )
 
         story = []
@@ -53,55 +70,76 @@ else:
         table_data = []
         in_table = False
 
+        # Lățimile coloanelor însumează exact 540 puncte (lățimea utilă a paginii)
+        col_widths = [120, 210, 210]
+
         for line in lines:
             stripped = line.strip()
-            # Verificăm dacă linia face parte dintr-un tabel Markdown (conține |)
+            # Verificăm dacă linia este parte dintr-un tabel Markdown
             if stripped.startswith('|') and stripped.endswith('|'):
-                # Ignorăm rândurile de separație de tip |---|---|
                 if '---' in stripped:
                     continue
-                
                 cols = [c.strip() for c in stripped.split('|')[1:-1]]
-                # Creăm paragrafe pentru fiecare celulă pentru a permite wrap-text corect
-                row_cells = [Paragraph(html.escape(c.replace('■', '-')), table_style) for c in cols]
+                row_cells = [Paragraph(html.escape(clean_text(c)), table_text_style) for c in cols]
                 table_data.append(row_cells)
                 in_table = True
             else:
-                # Dacă tocmai am ieșit dici dintr-un tabel, îl adăugăm în document
+                # Dacă am ieșit dici dintr-un tabel, îl randăm în document
                 if in_table and table_data:
-                    t = Table(table_data, colWidths=[130, 185, 185])
+                    formatted_data = []
+                    for r_idx, row in enumerate(table_data):
+                        new_row = []
+                        for cell in row:
+                            if r_idx == 0:
+                                new_row.append(Paragraph(cell.text, table_header_style))
+                            else:
+                                new_row.append(cell)
+                        formatted_data.append(new_row)
+
+                    t = Table(formatted_data, colWidths=col_widths)
                     t.setStyle(TableStyle([
                         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
-                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-                        ('TOPPADDING', (0, 0), (-1, -1), 6),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                        ('TOPPADDING', (0, 0), (-1, -1), 5),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+                        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
                         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
                     ]))
-                    # Schimbăm culoarea textului din header în alb pentru vizibilitate
-                    for i in range(len(table_data[0])):
-                        table_data[0][i] = Paragraph(f"<b>{table_data[0][i].text}</b>", ParagraphStyle('H', parent=table_style, textColor=colors.white))
-                    
                     story.append(t)
-                    story.append(Spacer(1, 10))
+                    story.append(Spacer(1, 8))
                     table_data = []
                     in_table = False
 
                 if stripped:
-                    clean_line = stripped.replace('■', '-').replace('–', '-')
+                    clean_line = clean_text(stripped)
                     safe_text = html.escape(clean_line)
                     safe_text = safe_text.replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
                     story.append(Paragraph(safe_text, normal_style))
                     story.append(Spacer(1, 4))
 
-        # Dacă textul se termină cu un tabel
+        # Dacă textul se termină direct cu un tabel
         if in_table and table_data:
-            t = Table(table_data, colWidths=[130, 185, 185])
+            formatted_data = []
+            for r_idx, row in enumerate(table_data):
+                new_row = []
+                for cell in row:
+                    if r_idx == 0:
+                        new_row.append(Paragraph(cell.text, table_header_style))
+                    else:
+                        new_row.append(cell)
+                formatted_data.append(new_row)
+
+            t = Table(formatted_data, colWidths=col_widths)
             t.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('LEFTPADDING', (0, 0), (-1, -1), 5),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 5),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
             ]))
             story.append(t)
