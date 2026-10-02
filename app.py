@@ -10,33 +10,6 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 # Setările paginii web
 st.set_page_config(page_title="Kompetenzanalyse", page_icon="📊", layout="centered")
 
-# Stiluri CSS pentru culorile butoanelor (Analiză = Verde, Zurücksetzen = Roșu)
-st.markdown("""
-    <style>
-    /* Butonul de generare (Analyse generieren) -> VERDE */
-    div.stColumn:nth-child(1) button {
-        background-color: #28a745 !important;
-        color: white !important;
-        border: none !important;
-    }
-    div.stColumn:nth-child(1) button:hover {
-        background-color: #218838 !important;
-        color: white !important;
-    }
-
-    /* Butonul de reset (Zurücksetzen) -> ROȘU */
-    div.stColumn:nth-child(2) button {
-        background-color: #dc3545 !important;
-        color: white !important;
-        border: none !important;
-    }
-    div.stColumn:nth-child(2) button:hover {
-        background-color: #c82333 !important;
-        color: white !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 st.title("📊 Kompetenzanalyse")
 st.markdown("Kostenloses digitales Instrument zur professionellen Kompetenzanalyse und Erstellung des Handlungsplans.")
 
@@ -54,7 +27,7 @@ else:
     if "raport_text" not in st.session_state:
         st.session_state.raport_text = ""
 
-    # Funcție sigură și stabilă pentru generarea PDF-ului în memorie (exact versiunea ta care funcționa perfect)
+    # Funcție sigură pentru generarea PDF-ului (curăță caracterele dubioase și liniile de tabel)
     def create_pdf(text):
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
@@ -69,9 +42,13 @@ else:
 
         for paragraph in text.split('\n'):
             if paragraph.strip():
-                # Curățăm și protejăm caracterele speciale pentru a preveni erorile ReportLab
-                safe_text = html.escape(paragraph)
-                # Înlocuim opțional formatarea îngroșată Markdown cu tag-uri HTML sigure pentru PDF
+                # Eliminăm caracterele problematice și liniile de tabel Markdown care strică aspectul PDF-ului
+                clean_line = paragraph.replace('■', '-').replace('–', '-')
+                if clean_line.strip().startswith('|') and clean_line.strip().endswith('|'):
+                    # Transformăm liniile de tabel într-un format text mai prietenos pentru PDF
+                    clean_line = clean_line.replace('|', ' | ')
+                
+                safe_text = html.escape(clean_line)
                 safe_text = safe_text.replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
                 
                 story.append(Paragraph(safe_text, normal_style))
@@ -81,7 +58,7 @@ else:
         buffer.seek(0)
         return buffer
 
-    # Secțiunea de Upload Documente (nou adăugată, opțională)
+    # Secțiunea de Upload Documente (opțional, integrată curat)
     st.subheader("📁 Dokumenten-Upload (Optional)")
     uploaded_files = st.file_uploader(
         "Laden Sie hier Lebensläufe, Zeugnisse, Zertifikate oder Empfehlungsschreiben hoch:",
@@ -97,7 +74,7 @@ else:
 
     st.divider()
 
-    # Formularul pentru introducerea datelor (în limba germană)
+    # Formularul pentru introducerea datelor
     with st.form("client_form"):
         st.subheader("Daten des Teilnehmers / Bewerbers")
         
@@ -125,7 +102,7 @@ else:
             with st.spinner("Das Profil wird analysiert und der Bericht wird erstellt..."):
                 
                 system_prompt = """Sie sind ein KI-Assistent und Experte für Job Coaching auf dem deutschen Arbeitsmarkt, spezialisiert auf die Erstellung von Kompetenzanalysen für Teilnehmer von Integrations- und Qualifizierungsmaßnahmen.
-                Generieren Sie einen strukturierten Bericht in deutscher Sprache mit exakt folgender Struktur:
+                Generieren Sie einen strukturierten Bericht in deutscher Sprache mit exakt folgender Struktur, ohne komplexe Markdown-Tabellen (verwenden Sie stattdessen übersichtliche Aufzählungen oder Fließtext, damit es in Dokumenten sauber lesbar ist):
                 1. ZUSAMMENFASSUNG DES PROFILS
                 2. KOMPETENZANALYSE (Fachkompetenz, Methodenkompetenz, Sozialkompetenz, Personale Kompetenz)
                 3. STÄRKEN-SCHWÄCHTE-ANALYSE & LÜCKEN (Bezug zum Arbeitsmarkt)
