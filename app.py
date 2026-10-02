@@ -2,6 +2,7 @@ import os
 import streamlit as st
 from groq import Groq
 from io import BytesIO
+import html
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -26,7 +27,7 @@ else:
     if "raport_text" not in st.session_state:
         st.session_state.raport_text = ""
 
-    # Funcție pentru generarea PDF-ului în memorie
+    # Funcție sigură pentru generarea PDF-ului în memorie
     def create_pdf(text):
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
@@ -41,7 +42,12 @@ else:
 
         for paragraph in text.split('\n'):
             if paragraph.strip():
-                story.append(Paragraph(paragraph, normal_style))
+                # Curățăm și protejăm caracterele speciale pentru a preveni erorile ReportLab
+                safe_text = html.escape(paragraph)
+                # Înlocuim opțional formatarea îngroșată Markdown cu tag-uri HTML sigure pentru PDF
+                safe_text = safe_text.replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
+                
+                story.append(Paragraph(safe_text, normal_style))
                 story.append(Spacer(1, 6))
 
         doc.build(story)
@@ -106,7 +112,7 @@ else:
                 except Exception as e:
                     st.error(f"Fehler bei der Generierung: {e}")
 
-    # Afișarea rezultatului și a butoanelor de export (dacă există un raport generat)
+    # Afișarea rezultatului și a butoanelor de export
     if st.session_state.form_submitted and st.session_state.raport_text:
         st.success("Die Analyse wurde erfolgreich erstellt!")
         st.markdown("### 📄 Kompetenzanalyse Bericht")
@@ -128,7 +134,7 @@ else:
             
         with col_word:
             st.download_button(
-                label="📥 Als Word (.txt/.doc) speichern",
+                label="📥 Als Word (.doc) speichern",
                 data=st.session_state.raport_text,
                 file_name="Kompetenzanalyse_Bericht.doc",
                 mime="text/plain"
