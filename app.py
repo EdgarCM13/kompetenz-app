@@ -6,10 +6,37 @@ import html
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
-import docx  # Necesar pentru generarea fișierelor Word reale (.docx)
+import docx
 
 # Setările paginii web
 st.set_page_config(page_title="Kompetenzanalyse", page_icon="📊", layout="centered")
+
+# Stiluri CSS personalizate pentru culorile butoanelor (Analiză = Verde, Zurücksetzen = Roșu)
+st.markdown("""
+    <style>
+    /* Butonul principal (Analyse generieren) devine VERDE */
+    div.stButton > button:first-child {
+        background-color: #28a745 !important;
+        color: white !important;
+        border: none !important;
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #218838 !important;
+        color: white !important;
+    }
+    /* Butonul de Reset (Zurücksetzen) devine ROȘU */
+    div.row-widget.stButton > button:nth-child(2), 
+    button[kind="secondary"] {
+        background-color: #dc3545 !important;
+        color: white !important;
+        border: none !important;
+    }
+    button[kind="secondary"]:hover {
+        background-color: #c82333 !important;
+        color: white !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 st.title("📊 Kompetenzanalyse & Profiling")
 st.markdown("Professionelles digitales Instrument zur Kompetenzanalyse, Dokumenten-Auswertung und Erstellung des Handlungsplans.")
@@ -28,7 +55,7 @@ else:
     if "raport_text" not in st.session_state:
         st.session_state.raport_text = ""
 
-    # Funcție pentru generarea PDF-ului în memorie
+    # Funcție sigură pentru generarea PDF-ului (evită caracterele dubioase/pătrățelele)
     def create_pdf(text):
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
@@ -43,7 +70,9 @@ else:
 
         for paragraph in text.split('\n'):
             if paragraph.strip():
-                safe_text = html.escape(paragraph)
+                # Înlocuim caracterele problematice care generează erori de codare în PDF
+                clean_p = paragraph.replace('■', '-').replace('–', '-')
+                safe_text = html.escape(clean_p)
                 safe_text = safe_text.replace("&lt;b&gt;", "<b>").replace("&lt;/b&gt;", "</b>")
                 story.append(Paragraph(safe_text, normal_style))
                 story.append(Spacer(1, 6))
@@ -52,25 +81,25 @@ else:
         buffer.seek(0)
         return buffer
 
-    # Funcție pentru generarea unui document Word (.docx) real, cu tabele/structură curată
+    # Funcție pentru generarea documentului Word (.docx) curat cu structură pe tabele/paragrafe
     def create_word(text):
         doc = docx.Document()
         doc.add_heading("Kompetenzanalyse Bericht", level=1)
         
         for paragraph in text.split('\n'):
             if paragraph.strip():
-                # Verificăm dacă linia este titlu (conține numerotare de tip 1., 2. etc.)
-                if any(paragraph.strip().startswith(prefix) for prefix in ["1.", "2.", "3.", "4.", "5."]):
-                    doc.add_heading(paragraph.strip(), level=2)
+                clean_p = paragraph.replace('■', '-')
+                if any(clean_p.strip().startswith(prefix) for prefix in ["1.", "2.", "3.", "4.", "5."]):
+                    doc.add_heading(clean_p.strip(), level=2)
                 else:
-                    doc.add_paragraph(paragraph.strip())
+                    doc.add_paragraph(clean_p.strip())
                     
         buffer = BytesIO()
         doc.save(buffer)
         buffer.seek(0)
         return buffer
 
-    # Secțiunea de Upload Documente (CV, Zeugnisse, Zertifikate)
+    # Secțiunea de Upload Documente
     st.subheader("📁 Dokumenten-Upload (Optional)")
     uploaded_files = st.file_uploader(
         "Laden Sie hier Lebensläufe, Zeugnisse, Zertifikate oder Empfehlungsschreiben hoch (PDF, Word, Bilder):",
@@ -86,20 +115,18 @@ else:
 
     st.divider()
 
-    # Formularul de date (Fără st.form strict, pentru a evita blocarea la tasta Enter și a permite editare fluidă)
+    # Formularul de date (Fără st.form strict, editare fluidă la Enter)
     st.subheader("Daten des Teilnehmers / Bewerbers")
     
     domeniu = st.text_input("Grundbereich / Hauptberufserfahrung (z. B. Logistik, Management, IT):", value="")
     vechime = st.text_area("Berufserfahrung / Werdegang (detaillierte Stationen):", value="", height=100)
     educatie = st.text_input("Ausbildung, Qualifikationen & Zertifikate (z. B. IHK, Studium):", value="")
-    
-    # Redenumit simplu în "Ziele" conform cerinței de a fi flexibil și curat
     obiective = st.text_area("Ziele (Berufliches Ziel / gewünschte Richtung, falls benötigt):", value="", height=80)
     observatii = st.text_area("Weitere Beobachtungen (Sozialkompetenzen, Barrieren, Sprachniveau):", value="", height=80)
     
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
-        submitted = st.button("Analyse generieren", type="primary")
+        submitted = st.button("Analyse generieren")
     with col_btn2:
         reset_btn = st.button("Zurücksetzen")
 
