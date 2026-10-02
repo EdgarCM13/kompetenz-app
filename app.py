@@ -70,24 +70,22 @@ else:
 
         for line in lines:
             stripped = line.strip()
-            # Ignorăm eventualele tabele cu 4 coloane dacă AI-ul încearcă totuși să le facă, transformându-le în text simplu
+            # Preluăm corect liniile de tabel Markdown
             if stripped.startswith('|') and stripped.endswith('|'):
                 if '---' in stripped:
                     continue
                 cols = [c.strip() for c in stripped.split('|')[1:-1]]
-                if len(cols) > 3:
-                    # Dacă are prea multe coloane, îl tratăm ca text normal ca să nu iasă din pagină
-                    story.append(Paragraph(html.escape(clean_text(" | ".join(cols))), normal_style))
-                    story.append(Spacer(1, 4))
-                    continue
-                
                 row_cells = [Paragraph(html.escape(clean_text(c)), table_text_style) for c in cols]
                 table_data.append(row_cells)
                 in_table = True
             else:
                 if in_table and table_data:
                     num_cols = len(table_data[0])
-                    col_widths = [110, 215, 215] # Lățime fixă exactă pentru pagină
+                    # Setăm lățimi dinamice în funcție de numărul de coloane detectat (total 540 pt)
+                    if num_cols == 4:
+                        col_widths = [110, 140, 140, 150]
+                    else:
+                        col_widths = [110, 215, 215]
 
                     formatted_data = []
                     for r_idx, row in enumerate(table_data):
@@ -127,7 +125,7 @@ else:
 
         if in_table and table_data:
             num_cols = len(table_data[0])
-            col_widths = [110, 215, 215]
+            col_widths = [110, 140, 140, 150] if num_cols == 4 else [110, 215, 215]
             
             formatted_data = []
             for r_idx, row in enumerate(table_data):
@@ -201,13 +199,13 @@ else:
         else:
             with st.spinner("Das Profil wird analysiert und der Bericht wird erstellt..."):
                 
-                # Promptul tău complex, actualizat cu o mică instrucțiune ca secțiunea 4 să fie listă curată, nu tabel lat
+                # Promptul tău original complet
                 system_prompt = """Sie sind ein KI-Assistent und Experte für Job Coaching auf dem deutschen Arbeitsmarkt, spezialisiert auf die Erstellung von Kompetenzanalysen für Teilnehmer von Integrations- und Qualifizierungsmaßnahmen.
-                Generieren Sie einen strukturierten Bericht in deutscher Sprache mit exakt folgender Struktur:
+                Generieren Sie einen strukturierten Bericht in deutscher Sprache mit exakt folgender Struktur und nutzen Sie Markdown-Tabellen für die Sektionen 2 und 3:
                 1. ZUSAMMENFASSUNG DES PROFILS
                 2. KOMPETENZANALYSE (Fachkompetenz, Methodenkompetenz, Sozialkompetenz, Personale Kompetenz)
                 3. STÄRKEN-SCHWÄCHTE-ANALYSE & LÜCKEN (Bezug zum Arbeitsmarkt)
-                4. ENTWICKLUNGS- UND HANDLUNGSEMPFEHLUNGEN für den Coach (Bitte für diesen Abschnitt KEINE Tabelle verwenden, sondern eine saubere, strukturierte Aufzählung im Textformat)."""
+                4. ENTWICKLUNGS- UND HANDLUNGSEMPFEHLUNGEN für den Coach (als übersichtliche Liste mit Maßnahmen, Zeitrahmen und Ergebnissen)"""
 
                 user_input = f"""
                 Bereich: {domeniu}
