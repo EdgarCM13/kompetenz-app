@@ -204,11 +204,13 @@ else:
         else:
             with st.spinner("Das Profil wird analysiert und der Bericht wird erstellt..."):
                 
-                system_prompt = """Sie sind ein KI-Assistent und Experte für Job Coaching auf dem deutschen Arbeitsmarkt, spezialisiert auf die Erstellung von Kompetenzanalysen für Teilnehmer von Integrations- und Qualifizierungsmaßnahmen.
-                Generieren Sie einen strukturierten Bericht in deutscher Sprache mit exakt folgender Struktur und nutzen Sie saubere Markdown-Tabellen. Vermeiden Sie Sonderzeichen oder Unicode-Symbole:
+                system_prompt = """Sie sind ein KI-Assistent und Experte für Job Coaching auf dem deutschen Arbeitsmarkt, spezialisiert auf die Erstellung ausfuehrlicher und detaillierter Kompetenzanalysen für Teilnehmer von Integrations- und Qualifizierungsmaßnahmen.
+                Generieren Sie einen sehr gründlichen, tiefgehenden und professionellen Bericht in deutscher Sprache. 
+                Schreiben Sie in den Markdown-Tabellen reichhaltige, ausführliche und aussagekräftige Beschreibungen (vermeiden Sie kurze Einwort-St Stichpunkte, nutzen Sie aussagekräftige Sätze und Details). Vermeiden Sie Sonderzeichen oder Unicode-Symbole.
+                Struktur:
                 1. ZUSAMMENFASSUNG DES PROFILS
-                2. KOMPETENZANALYSE (Fachkompetenz, Methodenkompetenz, Sozialkompetenz, Personale Kompetenz)
-                3. STÄRKEN-SCHWÄCHTE-ANALYSE & LÜCKEN (Bezug zum Arbeitsmarkt)
+                2. KOMPETENZANALYSE (Ausführliche Analyse für Fachkompetenz, Methodenkompetenz, Sozialkompetenz, Personale Kompetenz)
+                3. STÄRKEN-SCHWÄCHTE-ANALYSE & LÜCKEN (Detaillierter Bezug zum aktuellen Arbeitsmarkt)
                 4. ENTWICKLUNGS- UND HANDLUNGSEMPFEHLUNGEN für den Coach"""
 
                 user_input = f"""
